@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aventura City Dashboard (2024-2025)</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- D3.js for Charts -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    
+    <!-- Leaflet.js for Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Google Font: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Base font */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+        }
+        
+        /* Set map height */
+        #map {
+            height: 400px;
+            border-radius: 0.75rem; /* rounded-xl */
+        }
+
+        /* D3 Chart Tooltip */
+        .chart-tooltip {
+            position: absolute;
+            background-color: #111827; /* gray-900 */
+            color: white;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem; /* rounded-lg */
+            font-size: 0.875rem; /* text-sm */
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Leaflet popup customization */
+        .leaflet-popup-content-wrapper {
+            border-radius: 0.75rem; /* rounded-xl */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+        }
+        .leaflet-popup-content {
+            font-family: 'Inter', sans-serif;
+        }
+        .leaflet-popup-content b {
+            color: #003A5D; /* Aventura's brand color (approx) */
+        }
+
+        /* Modal styles */
+        .modal {
+            transition: opacity 0.25s ease;
+        }
+        .modal-content {
+            transition: transform 0.25s ease;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-50 w-full bg-white/95 shadow-md backdrop-blur-sm">
+        <nav class="max-w-screen-2xl mx-auto flex items-center justify-between p-4">
+            <div class="flex items-center space-x-4">
+                <img src="https://www.cityofaventura.com/img/logo.png" 
+                     alt="City of Aventura Logo" 
+                     class="h-10"
+                     onerror="this.onerror=null;this.src='https://placehold.co/150x40/003A5D/FFFFFF?text=Aventura';this.classList.add('p-2');">
+                <h1 class="text-xl md:text-2xl font-bold text-gray-800 tracking-tight">
+                    City Dashboard
+                </h1>
+            </div>
+            <div class="text-sm text-gray-500 hidden sm:block">
+                Last Updated: <span class="font-semibold text-gray-700">Oct 2025 (Projected)</span>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-screen-2xl mx-auto p-4 md:p-8">
+        
+        <!-- Page Title & Calculator Button -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+            <h2 class="text-3xl font-bold text-gray-900">Aventura, FL: City Performance (2024-2025)</h2>
+            <button id="openProjectionModal" class="mt-4 sm:mt-0 w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all">
+                <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21M9 17.25v-1.007a3 3 0 0 0-.879-2.122L7.5 15M9 17.25v-1.007a3 3 0 0 1 .879-2.122L10.5 15M9 17.25H4.557c-1.584 0-3.042-.632-4.096-1.686C.11 15.209 0 14.609 0 14.003c0-1.152.448-2.203 1.245-2.998.797-.795 1.846-1.247 2.998-1.247h.754V9a2.25 2.25 0 0 1 2.25-2.25H9v.007a2.25 2.25 0 0 1 2.25 2.25v.007H11.25V9a2.25 2.25 0 0 1 2.25-2.25H15v.007a2.25 2.25 0 0 1 2.25 2.25v.007h.754c1.152 0 2.203.448 2.998 1.247.796.795 1.246 1.846 1.246 2.998 0 .606-.11 1.209-.35 1.765a4.502 4.502 0 0 1-4.096 1.686H9Z" /></svg>
+                Projection Calculator
+            </button>
+        </div>
+
+        <!-- Executive KPI Summary -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
+            <!-- KPI Card: Population -->
+            <div class="bg-white p-6 rounded-2xl shadow-lg transition-all hover:shadow-xl hover:-translate-y-1">
+                <div class="flex items-center space-x-4">
+                    <div class="rounded-full bg-blue-100 p-3">
+                        <svg class="w-6 h-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.003c0 1.113.285 2.16.786 3.07M15 19.128a2.25 2.25 0 0 1-2.25-2.25V6.75A2.25 2.25 0 0 1 15 4.5h.003V19.128Zm-2.25 0a2.25 2.25 0 0 0-2.25-2.25H6.75A2.25 2.25 0 0 0 4.5 16.878v.003c0 1.113.285 2.16.786 3.07M6.75 16.878V6.75a2.25 2.25 0 0 1 2.25-2.25h.003v12.378c0 1.113-.285 2.16-.786 3.07M6.75 16.878A2.25 2.25 0 0 0 9 19.128v.003c0-1.113.285-2.16.786-3.07" /></svg>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-gray-500">Population (2025)</div>
+                        <div class="text-3xl font-bold text-gray-900">41,047</div>
+                    </div>
+                </div>
+            </div>
+            <!-- KPI Card: Income -->
+            <div class="bg-white p-6 rounded-2xl shadow-lg transition-all hover:shadow-xl hover:-translate-y-1">
+                <div class="flex items-center space-x-4">
+                    <div class="rounded-full bg-green-100 p-3">
+                        <svg class="w-6 h-6 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.825-2.902-.825-4.008 0l-.879.659M12 6v12m-3-2.818V8.381m6 11.437V8.381" /></svg>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-gray-500">Median Income</div>
+                        <div class="text-3xl font-bold text-gray-900">$82,777</div>
+                    </div>
+                </div>
+            </div>
+            <!-- KPI Card: Unemployment -->
+            <div class="bg-white p-6 rounded-2xl shadow-lg transition-all hover:shadow-xl hover:-translate-y-1">
+                <div class="flex items-center space-x-4">
+                    <div class="rounded-full bg-yellow-100 p-3">
+                        <svg class="w-6 h-6 text-yellow-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" /></svg>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-gray-500">Unemployment</div>
+                        <div class="text-3xl font-bold text-gray-900">2.9%</div>
+                    </div>
+                </div>
+            </div>
+            <!-- KPI Card: Crime -->
+            <div class="bg-white p-6 rounded-2xl shadow-lg transition-all hover:shadow-xl hover:-translate-y-1">
+                <div class="flex items-center space-x-4">
+                    <div class="rounded-full bg-red-100 p-3">
+                        <svg class="w-6 h-6 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.008v.008H12v-.008Z" /></svg>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-gray-500">Property Crime</div>
+                        <div class="text-3xl font-bold text-red-600">Grade: F</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Dashboard Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+            
+            <!-- Column 1: Demographics & Economy -->
+            <div class="lg:col-span-1 space-y-6 md:space-y-8">
+                
+                <!-- Demographics Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-lg" title="Sources: US Census, World Population Review (2024-2025)">
+                    <div class="flex items-center space-x-3 mb-4">
+                        <div class="rounded-full bg-blue-100 p-2">
+                            <svg class="w-5 h-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-3.741-5.192 3 3 0 0 0-3.741 5.192 9.094 9.094 0 0 0 3.741.479ZM18 18.72h.008v.008h-.008v-.008ZM18 18.72c.076.024.153.048.23.072m-2.238.252c.226.042.457.078.692.108m-1.158.402c.307.042.618.08.934.114m-1.649.463c.375.043.756.082 1.142.117M12.162 15.368c.26.03.524.055.792.076m-1.103.35c.314.04.632.076.954.106m-1.46.398c.32.04.644.076.972.106m-1.876.462c.344.04.692.076 1.044.106" /></svg>
+                        </div>
+                        <h3 class="text-xl font-semibold text-gray-800">Demographics</h3>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-3 gap-4 text-center">
+                            <div>
+                                <div class="text-2xl font-bold text-blue-700">48.4</div>
+                                <div class="text-sm text-gray-500">Median Age</div>
+                            </div>
+                            <div>
+                                <div class="text-2xl font-bold text-blue-700">1.3%</div>
+                                <div class="text-sm text-gray-500">Growth Rate</div>
+                            </div>
+                            <div>
+                                <div class="text-2xl font-bold text-blue-700">54%</div>
+                                <div class="text-sm text-gray-500">Female</div>
+                            </div>
+                        </div>
+                        <div class="text-sm text-gray-700">
+                            <div class="font-semibold">Diversity:</div>
+                            <div class="flex justify-between"><span>White (Non-Hisp):</span> <span>47.3%</span></div>
+                            <div class="flex justify-between"><span>Hispanic:</span> <span>45.0%</span></div>
+                        </div>
+                        <h4 class="text-md font-semibold text-gray-700 pt-2">Population Trend</h4>
+                        <div id="popChart" class="w-full h-48"></div>
+                    </div>
+                </div>
+
+                <!-- Economy Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-lg" title="Sources: US Census ACS, BLS, Miami-Dade Beacon Council">
+                    <div class="flex items-center space-x-3 mb-4">
+                        <div class="rounded-full bg-green-100 p-2">
+                            <svg class="w-5 h-5 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.75A.75.75 0 0 1 3 4.5h.75m0 0H21m-12 6.75A.75.75 0 0 0 9 10.5h.75m.001 0v.75a.75.75 0 0 0 .75.75h.75m0 0H21m-6.75-4.5A.75.75 0 0 0 13.5 6h.75m.001 0v.75a.75.75 0 0 0 .75.75h.75m0 0H21m-3.75-4.5A.75.75 0 0 0 16.5 6h.75m.001 0v.75a.75.75 0 0 0 .75.75h.75m0 0H21" /></svg>
+                        </div>
+                        <h3 class="text-xl font-semibold text-gray-800">Economic Indicators</h3>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-3 gap-4 text-center">
+                            <div>
+                                <div class="text-2xl font-bold text-green-700">5,795</div>
+                                <div class="text-sm text-gray-500">Businesses</div>
+                            </div>
+                            <div>
+                                <div class="text-2xl font-bold text-green-700">9.8%</div>
+                                <div class="text-sm text-gray-500">Poverty Rate</div>
+                            </div>
+                            <div>
+                                <div class="text-2xl font-bold text-green-700">+10.1%</div>
+                                <div class="text-sm text-gray-500">Income Growth (YoY)</div>
+                            </div>
+                        </div>
+                        <h4 class="text-md font-semibold text-gray-700 pt-2">Median Household Income</h4>
+                        <div id="econChart" class="w-full h-48"></div>
+                    </div>
+                </div>
+
+                <!-- City Finances Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-lg" title="Source: City of Aventura Adopted Budget FY 2024-2025">
+                    <div class="flex items-center space-x-3 mb-4">
+                        <div class="rounded-full bg-purple-100 p-2">
+                            <svg class="w-5 h-5 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0 0 12 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75Z" /></svg>
+                        </div>
+                        <h3 class="text-xl font-semibold text-gray-800">City Finances (FY 24-25)</h3>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-500">Total Budget:</span>
+                            <span class="text-2xl font-bold text-purple-700">$54.3M</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-500">Tax Rate (Mills):</span>
+                            <span class="text-lg font-semibold text-gray-800">1.726</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-500">Budget Growth:</span>
+                            <span class="text-lg font-semibold text-gray-800">+8.03%</span>
+                        </div>
+                        <div class="text-sm text-gray-600 pt-2">
+                            <span class="font-semibold">Note:</span> 2nd lowest tax rate in Miami-Dade County for 29 consecutive years.
+                        </div>
+                    </div>
+                </div>
+
+            </div> <!-- End Column 1 -->
+
+            <!-- Column 2: Map, Housing, Crime -->
+            <div class="lg:col-span-2 space-y-6 md:space-y-8">
+
+                <!-- Map & Infrastructure Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-lg" title="Sources: City Reports, Miami-Dade GIS">
+                    <div class="flex items-center space-x-3 mb-4">
+                        <div class="rounded-full bg-cyan-100 p-2">
+                            <svg class="w-5 h-5 text-cyan-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.5 3H7.5a2.25 2.25 0 0 1-2.25-2.25V7.5A2.25 2.25 0 0 1 7.5 5.25h9a2.25 2.25 0 0 1 2.25 2.25v9A2.25 2.25 0 0 1 16.5 18.75Z" /></svg>
+                        </div>
+                        <h3 class="text-xl font-semibold text-gray-800">Infrastructure & City Assets</h3>
+                    </div>
+                    <!-- Map Container -->
+                    <div id="map" class="mb-4 bg-gray-200"></div>
+                    <!-- Map KPIs -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                        <div>
+                            <div class="text-2xl font-bold text-cyan-700">Active</div>
+                            <div class="text-sm text-gray-500">Brightline Station</div>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-bold text-cyan-700">18,000+</div>
+                            <div class="text-sm text-gray-500">Monthly Riders</div>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-bold text-cyan-700">3+</div>
+                            <div class="text-sm text-gray-500">Major Parks</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Housing & Crime Row -->
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8">
+                    
+                    <!-- Housing Card -->
+                    <div class="bg-white p-6 rounded-2xl shadow-lg" title="Sources: Redfin, Zillow, US Census (2024-2025)">
+                        <div class="flex items-center space-x-3 mb-4">
+                            <div class="rounded-full bg-indigo-100 p-2">
+                                <svg class="w-5 h-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" /></svg>
+                            </div>
+                            <h3 class="text-xl font-semibold text-gray-800">Housing & Real Estate</h3>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-3 gap-4 text-center">
+                                <div>
+                                    <div class="text-2xl font-bold text-indigo-700">$515K</div>
+                                    <div class="text-sm text-gray-500">Median Sale Price</div>
+                                </div>
+                                <div>
+                                    <div class="text-2xl font-bold text-indigo-700">64.5%</div>
+                                    <div class="text-sm text-gray-500">Homeownership</div>
+                                </div>
+                                <div>
+                                    <div class="text-2xl font-bold text-indigo-700">$2,423</div>
+                                    <div class="text-sm text-gray-500">Median Rent</div>
+                                </div>
+                            </div>
+                            <h4 class="text-md font-semibold text-gray-700 pt-2">Median Sale Price Trend</h4>
+                            <div id="housingChart" class="w-full h-48"></div>
+                        </div>
+                    </div>
+
+                    <!-- Public Safety Card -->
+                    <div class="bg-white p-6 rounded-2xl shadow-lg" title="Sources: Area Vibes, FBI UCR, City Police Dept (2024)">
+                        <div class="flex items-center space-x-3 mb-4">
+                            <div class="rounded-full bg-red-100 p-2">
+                                <svg class="w-5 h-5 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.008v.008H12v-.008Z" /></svg>
+                            </div>
+                            <h3 class="text-xl font-semibold text-gray-800">Public Safety</h3>
+                        </div>
+                        <div class="space-y-4">
+                             <div class="grid grid-cols-2 gap-4 text-center">
+                                <div>
+                                    <div class="text-2xl font-bold text-green-600">Grade: B</div>
+                                    <div class="text-sm text-gray-500">Violent Crime</div>
+                                    <div class="text-xs text-gray-400">(55% below avg)</div>
+                                </div>
+                                <div>
+                                    <div class="text-2xl font-bold text-red-600">Grade: F</div>
+                                    <div class="text-sm text-gray-500">Property Crime</div>
+                                    <div class="text-xs text-gray-400">(122% above avg)</div>
+                                </div>
+                            </div>
+                            <h4 class="text-md font-semibold text-gray-700 pt-2">Crime vs. National Avg (per 100k)</h4>
+                            <div id="crimeChart" class="w-full h-48"></div>
+                        </div>
+                    </div>
+
+                </div> <!-- End Housing/Crime Row -->
+
+                <!-- Education & Tourism Row -->
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8">
+                    <!-- Education Card -->
+                    <div class="bg-white p-6 rounded-2xl shadow-lg" title="Sources: Florida DOE, School Reports, Niche (2024-2025)">
+                        <div class="flex items-center space-x-3 mb-4">
+                            <div class="rounded-full bg-orange-100 p-2">
+                                <svg class="w-5 h-5 text-orange-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c.24 0 .468.02.69.058m-1.38 0A9.005 9.005 0 0 1 12 3c2.345 0 4.51.861 6.176 2.274m0 0a3.004 3.004 0 0 0-4.176-2.274M12 21c-2.345 0-4.51-.861-6.176-2.274m0 0a3.004 3.004 0 0 1 4.176-2.274m6.176 2.274a3.004 3.004 0 0 0 2.868-3.835M12 3v.005m0 0H12m1.176 2.274a3.004 3.004 0 0 1-2.868-3.835m0 0a3.004 3.004 0 0 0 2.868 3.835m0 0c-1.12 0-2.174-.46-2.924-1.215m0 0a3.004 3.004 0 0 1 2.924-1.215" /></svg>
+                            </div>
+                            <h3 class="text-xl font-semibold text-gray-800">Education Excellence</h3>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="text-center">
+                                <div class="text-2xl font-bold text-orange-700">55.3%</div>
+                                <div class="text-sm text-gray-500">Bachelor's Degree or Higher</div>
+                            </div>
+                            <div class="space-y-2 text-sm text-gray-700">
+                                <div class="font-semibold">Aventura Excellence (K-8):</div>
+                                <div class="flex justify-between"><span>Math Proficiency:</span> <span class="font-bold">88%</span></div>
+                                <div class="flex justify-between"><span>Reading Proficiency:</span> <span class="font-bold">81%</span></div>
+                            </div>
+                             <div class="space-y-2 text-sm text-gray-700">
+                                <div class="font-semibold">Don Soffer HS:</div>
+                                <div class="flex justify-between"><span>Graduation Rate:</span> <span class="font-bold">95-99%</span></div>
+                                <div class="flex justify-between"><span>Average SAT:</span> <span class="font-bold">1250+</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tourism Card -->
+                    <div class="bg-white p-6 rounded-2xl shadow-lg" title="Sources: Visit Florida, Business Journal (2024-2025)">
+                        <div class="flex items-center space-x-3 mb-4">
+                            <div class="rounded-full bg-teal-100 p-2">
+                                <svg class="w-5 h-5 text-teal-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Zm0 0c0 1.657 1.007 3 2.25 3S21 13.657 21 12a9 9 0 1 0-2.636 6.364M16.5 12V8.25" /></svg>
+                            </div>
+                            <h3 class="text-xl font-semibold text-gray-800">Tourism & Visitors</h3>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4 text-center">
+                                <div>
+                                    <div class="text-2xl font-bold text-teal-700">142.9M</div>
+                                    <div class="text-sm text-gray-500">FL Visitors (State)</div>
+                                </div>
+                                <div>
+                                    <div class="text-2xl font-bold text-teal-700">+6.7%</div>
+                                    <div class="text-sm text-gray-500">Hotel Occupancy (Q4)</div>
+                                </div>
+                            </div>
+                            <div class="space-y-2 text-sm text-gray-700">
+                                <div class="font-semibold">Aventura Mall Visitors:</div>
+                                <div class="flex justify-between"><span>International:</span> <span class="font-bold">24%</span></div>
+                                <div class="flex justify-between"><span>Domestic Day-Trip:</span> <span class="font-bold">12%</span></div>
+                            </div>
+                             <div class="space-y-2 text-sm text-gray-700">
+                                <div class="font-semibold">Airbnb Market:</div>
+                                <div class="flex justify-between"><span>Active Listings:</span> <span class="font-bold">~260</span></div>
+                                <div class="flex justify-between"><span>Median Revenue:</span> <span class="font-bold">$4,178/mo</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div> <!-- End Education/Tourism Row -->
+
+            </div> <!-- End Column 2 -->
+
+        </div> <!-- End Main Grid -->
+
+        <!-- START: New Embedded Charts Section -->
+        <section class="mt-12">
+            <h2 class="text-3xl font-bold text-gray-900 mb-6">Detailed DataUSA Insights</h2>
+            
+            <!-- Grid for embedded charts -->
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8">
+                
+                <!-- Chart 1: Property -->
+                <div class="bg-white p-6 rounded-2xl shadow-lg">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Housing: Property</h3>
+                    <a href="https://datausa.io/profile/geo/aventura-fl/housing/property?viz=true" target="_blank" class="text-blue-600 hover:underline break-words">
+                        View Chart: datausa.io/.../housing/property
+                    </a>
+                </div>
+
+                <!-- Chart 2: Rent vs Own -->
+                <div class="bg-white p-6 rounded-2xl shadow-lg">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Housing: Rent vs. Own</h3>
+                    <a href="https://datausa.io/profile/geo/aventura-fl/housing/rent_own?viz=true" target="_blank" class="text-blue-600 hover:underline break-words">
+                        View Chart: datausa.io/.../housing/rent_own
+                    </a>
+                </div>
+
+                <!-- Chart 3: Income by Location -->
+                <div class="bg-white p-6 rounded-2xl shadow-lg">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Housing: Income by Location</h3>
+                    <a href="https://datausa.io/profile/geo/aventura-fl/housing/income-by-location?viz=true" target="_blank" class="text-blue-600 hover:underline break-words">
+                        View Chart: datausa.io/.../housing/income-by-location
+                    </a>
+                </div>
+
+                <!-- Chart 4: Mode of Transport -->
+                <div class="bg-white p-6 rounded-2xl shadow-lg">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Housing: Mode of Transport</h3>
+                    <a href="https://datausa.io/profile/geo/aventura-fl/housing/mode_transport?viz=true" target="_blank" class="text-blue-600 hover:underline break-words">
+                        View Chart: datausa.io/.../housing/mode_transport
+                    </a>
+                </div>
+
+                <!-- Chart 5: Poverty & Diversity -->
+                <div class="bg-white p-6 rounded-2xl shadow-lg">
+                     <h3 class="text-lg font-semibold text-gray-800 mb-2">Housing: Poverty & Diversity</h3>
+                    <a href="https://datausa.io/profile/geo/aventura-fl/housing/poverty_and_diversity?viz=true" target="_blank" class="text-blue-600 hover:underline break-words">
+                        View Chart: datausa.io/.../housing/poverty_and_diversity
+                    </a>
+                </div>
+
+            </div>
+        </section>
+        <!-- END: New Embedded Charts Section -->
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-12 mb-6 text-center text-sm text-gray-500">
+        Dashboard data compiled from 90+ sources incl. 
+        <a href="https://www.census.gov" target="_blank" class="text-blue-600 hover:underline">US Census</a>,
+        <a href="https://www.bls.gov" target="_blank" class="text-blue-600 hover:underline">BLS</a>,
+        <a href="https://www.cityofaventura.com" target="_blank" class="text-blue-600 hover:underline">City Portal</a>,
+        &amp; <a href="https://datausa.io/profile/geo/aventura-fl" target="_blank" class="text-blue-600 hover:underline">DataUSA</a>.
+    </footer>
+
+    <!-- D3 Chart Tooltip -->
+    <div id="chart-tooltip" class="chart-tooltip"></div>
+
+    <!-- Projection Calculator Modal -->
+    <div id="projectionModal" class="modal fixed inset-0 z-[100] bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 opacity-0 invisible" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="modal-content bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden transform -translate-y-10">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between p-5 border-b border-gray-200">
+                <h3 class="text-xl font-semibold text-gray-900" id="modal-title">
+                    Population Projection Calculator
+                </h3>
+                <button id="closeProjectionModal" type="button" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                    <span class="sr-only">Close modal</span>
+                </button>
+            </div>
+            
+            <!-- Modal Body -->
+            <div class="p-6 space-y-6">
+                <p class="text-sm text-gray-600">
+                    Use the slider to project how a change in population might affect other city metrics.
+                    This is a simplified model based on current per-capita rates.
+                </p>
+                
+                <!-- Input Slider -->
+                <div>
+                    <label for="popSlider" class="block text-sm font-medium text-gray-700">Projected Population</label>
+                    <input id="popSlider" type="range" min="41047" max="60000" value="41047" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer mt-2">
+                    <div class="text-center text-2xl font-bold text-blue-600 mt-2" id="popSliderValue">41,047</div>
+                </div>
+                
+                <!-- Projections -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Base Data -->
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-gray-700 mb-3">Base Data (2025)</h4>
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-500">Population:</span>
+                                <span class="font-medium text-gray-800" id="base_population">41,047</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-500">Businesses:</span>
+                                <span class="font-medium text-gray-800" id="base_businesses">5,795</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-500">Median Income:</span>
+                                <span class="font-medium text-gray-800" id="base_income">$82,777</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-500">Violent Crime (Rate):</span>
+                                <span class="font-medium text-gray-800" id="base_violent_rate">112 / 100k</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-500">Property Crime (Rate):</span>
+                                <span class="font-medium text-gray-800" id="base_property_rate">3,900 / 100k</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Projected Data -->
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-blue-800 mb-3">Projected Figures</h4>
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-blue-600">Proj. Businesses:</span>
+                                <span class="font-bold text-blue-800" id="proj_businesses">5,795</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-blue-600">Proj. Median Income:</span>
+                                <span class="font-bold text-blue-800" id="proj_income">$82,777</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-blue-600">Proj. Violent Crimes:</span>
+                                <span class="font-bold text-blue-800" id="proj_violent_total">46</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-blue-600">Proj. Property Crimes:</span>
+                                <span class="font-bold text-blue-800" id="proj_property_total">1,601</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // Debounce function to limit resize event firing
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // --- Chart Tooltip ---
+            const tooltip = d3.select("#chart-tooltip");
+
+            const showTooltip = (event, d, content) => {
+                tooltip.style("opacity", 1)
+                       .html(content)
+                       .style("left", (event.pageX + 10) + "px")
+                       .style("top", (event.pageY - 28) + "px");
+            };
+
+            const moveTooltip = (event) => {
+                tooltip.style("left", (event.pageX + 10) + "px")
+                       .style("top", (event.pageY - 28) + "px");
+            };
+
+            const hideTooltip = () => {
+                tooltip.style("opacity", 0);
+            };
+
+            // --- Chart Drawing Functions ---
+            
+            function drawPopChart() {
+                const data = [
+                    {year: "2020", pop: 40042}, 
+                    {year: "2024", pop: 40531}, 
+                    {year: "2025", pop: 41047}
+                ];
+                drawBarChart("#popChart", data, "year", "pop", "text-blue-600", "Population");
+            }
+
+            function drawEconChart() {
+                const data = [
+                    {year: "2022", income: 75211}, 
+                    {year: "2023", income: 82777}
+                ];
+                drawBarChart("#econChart", data, "year", "income", "text-green-600", "Income");
+            }
+
+            function drawHousingChart() {
+                const data = [
+                    {label: "2023", price: 640000}, 
+                    {label: "2025", price: 515000}
+                ];
+                drawBarChart("#housingChart", data, "label", "price", "text-indigo-600", "Sale Price");
+            }
+
+            function drawCrimeChart() {
+                const data = [
+                    {group: "Violent", Aventura: 112, National: 249}, 
+                    {group: "Property", Aventura: 3900, National: 1757}
+                ];
+                
+                const container = d3.select("#crimeChart");
+                container.html(""); // Clear previous
+                
+                const rect = container.node().getBoundingClientRect();
+                const margin = {top: 20, right: 20, bottom: 40, left: 50};
+                const width = rect.width - margin.left - margin.right;
+                const height = rect.height - margin.top - margin.bottom;
+
+                const svg = container.append("svg")
+                    .attr("width", rect.width)
+                    .attr("height", rect.height)
+                    .append("g")
+                    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+                const groups = data.map(d => d.group);
+                const subgroups = ["Aventura", "National"];
+
+                const x = d3.scaleBand()
+                    .domain(groups)
+                    .range([0, width])
+                    .padding(0.2);
+
+                const y = d3.scaleLinear()
+                    .domain([0, d3.max(data, d => Math.max(d.Aventura, d.National))]).nice()
+                    .range([height, 0]);
+
+                svg.append("g")
+                   .attr("transform", `translate(0,${height})`)
+                   .call(d3.axisBottom(x))
+                   .selectAll("text")
+                   .attr("class", "text-xs text-gray-500");
+
+                svg.append("g")
+                   .call(d3.axisLeft(y).ticks(5))
+                   .selectAll("text")
+                   .attr("class", "text-xs text-gray-500");
+
+                const xSubgroup = d3.scaleBand()
+                    .domain(subgroups)
+                    .range([0, x.bandwidth()])
+                    .padding(0.05);
+
+                const color = d3.scaleOrdinal()
+                    .domain(subgroups)
+                    .range(['#ef4444', '#6b7280']); // red-500, gray-500
+
+                svg.append("g")
+                    .selectAll("g")
+                    .data(data)
+                    .join("g")
+                    .attr("transform", d => `translate(${x(d.group)},0)`)
+                    .selectAll("rect")
+                    .data(d => subgroups.map(key => ({key, value: d[key]})))
+                    .join("rect")
+                    .attr("x", d => xSubgroup(d.key))
+                    .attr("y", d => y(d.value))
+                    .attr("width", xSubgroup.bandwidth())
+                    .attr("height", d => height - y(d.value))
+                    .attr("fill", d => color(d.key))
+                    .on("mouseover", (event, d) => {
+                        showTooltip(event, d, `<b>${d.key}</b><br>${d.value.toLocaleString()}`);
+                    })
+                    .on("mousemove", moveTooltip)
+                    .on("mouseout", hideTooltip);
+            }
+
+            // --- Generic Bar Chart Function ---
+            function drawBarChart(selector, data, xKey, yKey, tailwindColor, tooltipPrefix) {
+                const container = d3.select(selector);
+                container.html(""); // Clear previous
+                
+                const rect = container.node().getBoundingClientRect();
+                const margin = {top: 20, right: 20, bottom: 30, left: 60};
+                const width = rect.width - margin.left - margin.right;
+                const height = rect.height - margin.top - margin.bottom;
+
+                const svg = container.append("svg")
+                    .attr("width", rect.width)
+                    .attr("height", rect.height)
+                    .append("g")
+                    .attr("transform", `translate(${margin.left},${margin.top})`);
+                
+                // Use a map for Tailwind colors for reliability
+                const colorMap = {
+                    "text-blue-600": "#2563eb",
+                    "text-green-600": "#16a34a",
+                    "text-indigo-600": "#4f46e5"
+                };
+                const finalColor = colorMap[tailwindColor] || "#2563eb";
+
+                const x = d3.scaleBand()
+                    .range([0, width])
+                    .domain(data.map(d => d[xKey]))
+                    .padding(0.4);
+
+                svg.append("g")
+                    .attr("transform", `translate(0,${height})`)
+                    .call(d3.axisBottom(x))
+                    .selectAll("text")
+                    .attr("class", "text-sm text-gray-500 font-medium");
+
+                const y = d3.scaleLinear()
+                    .domain([0, d3.max(data, d => d[yKey]) * 1.1])
+                    .range([height, 0]);
+
+                svg.append("g")
+                    .call(d3.axisLeft(y).ticks(5).tickFormat(d => {
+                        if (d >= 1000000) return `$${d/1000000}M`;
+                        if (d >= 1000) return `$${d/1000}K`;
+                        return d.toLocaleString();
+                    }))
+                    .selectAll("text")
+                    .attr("class", "text-xs text-gray-500");
+
+                svg.selectAll("mybar")
+                    .data(data)
+                    .enter()
+                    .append("rect")
+                    .attr("x", d => x(d[xKey]))
+                    .attr("y", d => y(d[yKey]))
+                    .attr("width", x.bandwidth())
+                    .attr("height", d => height - y(d[yKey]))
+                    .attr("fill", finalColor)
+                    .attr("rx", 4) // Rounded corners
+                    .attr("ry", 4)
+                    .on("mouseover", (event, d) => {
+                        let val = d[yKey];
+                        let formattedVal = val.toLocaleString();
+                        if (tooltipPrefix === "Income" || tooltipPrefix === "Sale Price") {
+                            formattedVal = `$${formattedVal}`;
+                        }
+                        showTooltip(event, d, `<b>${d[xKey]}</b><br>${tooltipPrefix}: ${formattedVal}`);
+                    })
+                    .on("mousemove", moveTooltip)
+                    .on("mouseout", hideTooltip);
+            }
+
+            // --- Leaflet Map ---
+            function initMap() {
+                try {
+                    // Use a clean, light map tile
+                    const tileUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+                    const attribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+
+                    var map = L.map('map').setView([25.9565, -80.1395], 14);
+                    L.tileLayer(tileUrl, { attribution, maxZoom: 19 }).addTo(map);
+
+                    // Add markers
+                    L.marker([25.9573,-80.1426]).addTo(map).bindPopup("<b>Aventura Mall</b>");
+                    L.marker([25.9570, -80.1410]).addTo(map).bindPopup("<b>Brightline Station</b>");
+                    L.marker([25.9603,-80.1427]).addTo(map).bindPopup("<b>Aventura Excellence School (K-8)</b>");
+                    L.marker([25.9610, -80.1425]).addTo(map).bindPopup("<b>Don Soffer Aventura HS</b>");
+                    L.marker([25.9605,-80.1418]).addTo(map).bindPopup("<b>Community Rec Center</b>");
+                    L.marker([25.9542,-80.1392]).addTo(map).bindPopup("<b>Arts & Cultural Center</b>");
+                    L.marker([25.9550,-80.1410]).addTo(map).bindPopup("<b>Aventura City Hall</b>");
+                    L.marker([25.947, -80.138]).addTo(map).bindPopup("<b>Founders Park</b>");
+                } catch(e) {
+                    console.error("Error initializing Leaflet map:", e);
+                    document.getElementById('map').innerHTML = '<div class="p-4 text-center text-red-600">Error loading map.</div>';
+                }
+            }
+
+            // --- Initial Draw ---
+            function drawAllCharts() {
+                try {
+                    drawPopChart();
+                    drawEconChart();
+                    drawHousingChart();
+                    drawCrimeChart();
+                } catch (e) {
+                    console.error("Error drawing charts:", e);
+                }
+            }
+
+            drawAllCharts();
+            initMap();
+
+            // --- Redraw on Resize (Debounced) ---
+            window.addEventListener('resize', debounce(drawAllCharts, 250));
+
+            // --- NEW: Projection Modal Logic ---
+            try {
+                const modal = document.getElementById('projectionModal');
+                const openBtn = document.getElementById('openProjectionModal');
+                const closeBtn = document.getElementById('closeProjectionModal');
+
+                const showModal = () => {
+                    modal.classList.remove('invisible', 'opacity-0');
+                    modal.querySelector('.modal-content').classList.remove('-translate-y-10');
+                };
+
+                const hideModal = () => {
+                    modal.classList.add('opacity-0');
+                    modal.querySelector('.modal-content').classList.add('-translate-y-10');
+                    setTimeout(() => modal.classList.add('invisible'), 250); // Wait for transition
+                };
+
+                openBtn.addEventListener('click', showModal);
+                closeBtn.addEventListener('click', hideModal);
+                // Close on backdrop click
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        hideModal();
+                    }
+                });
+
+                // --- Calculator Logic ---
+                const slider = document.getElementById('popSlider');
+                const sliderValueDisplay = document.getElementById('popSliderValue');
+                
+                // Output fields
+                const projBusinesses = document.getElementById('proj_businesses');
+                const projIncome = document.getElementById('proj_income');
+                const projViolentTotal = document.getElementById('proj_violent_total');
+                const projPropertyTotal = document.getElementById('proj_property_total');
+
+                // Base values from dashboard
+                const base_population = 41047;
+                const base_businesses = 5795;
+                const base_income = 82777;
+                const base_violent_rate = 112 / 100000;
+                const base_property_rate = 3900 / 100000;
+
+                // Set initial base values in modal
+                document.getElementById('base_population').textContent = base_population.toLocaleString();
+                document.getElementById('base_businesses').textContent = base_businesses.toLocaleString();
+                document.getElementById('base_income').textContent = `$${base_income.toLocaleString()}`;
+                document.getElementById('base_violent_rate').textContent = `${(base_violent_rate * 100000).toFixed(0)} / 100k`;
+                document.getElementById('base_property_rate').textContent = `${(base_property_rate * 100000).toFixed(0)} / 100k`;
+
+
+                function calculateProjections() {
+                    const new_population = parseInt(slider.value, 10);
+                    
+                    // 1. Update slider display
+                    sliderValueDisplay.textContent = new_population.toLocaleString();
+                    
+                    // 2. Calculate new metrics
+                    const businesses_per_capita = base_businesses / base_population;
+                    const projected_businesses = new_population * businesses_per_capita;
+
+                    const population_diff = new_population - base_population;
+                    // Arbitrary model: +$50 income for every 1,000 new people
+                    const projected_income = base_income + (population_diff / 1000) * 50; 
+                    
+                    const projected_violent_crimes_total = new_population * base_violent_rate;
+                    const projected_property_crimes_total = new_population * base_property_rate;
+
+                    // 3. Update projection display
+                    projBusinesses.textContent = projected_businesses.toLocaleString(undefined, {maximumFractionDigits: 0});
+                    projIncome.textContent = `$${projected_income.toLocaleString(undefined, {maximumFractionDigits: 0})}`;
+                    projViolentTotal.textContent = projected_violent_crimes_total.toLocaleString(undefined, {maximumFractionDigits: 0});
+                    projPropertyTotal.textContent = projected_property_crimes_total.toLocaleString(undefined, {maximumFractionDigits: 0});
+                }
+
+                // Add listener to slider
+                slider.addEventListener('input', calculateProjections);
+                
+                // Run once on load to set initial projection values
+                calculateProjections();
+
+            } catch (e) {
+                console.error("Error setting up projection modal:", e);
+            }
+
+        });
+    </script>
+</body>
+</html>
+
+
